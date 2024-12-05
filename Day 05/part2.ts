@@ -1,33 +1,39 @@
-import { pageOrderingRules as por, pagesToPrint as p2p } from "./input.ts";
+import { pageOrderingRules, pagesToPrint } from "./input.ts";
 
-const toNumberLists = (input: string, delimiter: string) => input
+const parseInput = (input: string, delimiter: string) => input
     .split(/\n/g)
     .map((subStr) => subStr
-        .split(delimiter)
-        .map((char) => +char
-    )
-);
-const porList = toNumberLists(por, '|');
-const toPrint = toNumberLists(p2p, ',');
+    .split(delimiter))
+;
+const rulesList = parseInput(pageOrderingRules, '|');
+const toPrint = parseInput(pagesToPrint, ',');
 
-const porDict = porList.reduce((acc, [isBefore, isAfter]) => {
-    if (!acc[isBefore]) acc[isBefore] = new Set();
-    acc[isBefore].add(isAfter);
+const rulesDict = rulesList.reduce((acc, [page, pageAfter]) => {
+    if (!acc[page]) acc[page] = new Set();
+    acc[page].add(pageAfter);
     return acc;
-}, {} as { [key: number]: Set<number> });
+}, {} as { [key: string]: Set<string> });
 
-const sortIntoPrintOrder = (p1: number, p2: number) => {
-    const pagesAfterP1 = porDict[p1];
-    const pagesAfterP2 = porDict[p2];
+const isPageOutOfOrder = (page: string, prevPages: string[]) => {
+    const pagesAfter = rulesDict[page];
+    return prevPages.some((prevPage) => pagesAfter.has(prevPage));
+}
+
+const sortIntoPrintOrder = (p1: string, p2: string) => {
+    const pagesAfterP1 = rulesDict[p1];
+    const pagesAfterP2 = rulesDict[p2];
     if (pagesAfterP1.has(p2)) return -1;
     if (pagesAfterP2.has(p1)) return 1;
     return 0;
 };
 
-const answer = toPrint.reduce((acc, pages) => {
+const badPages = toPrint.filter((pages) => {
+    return pages.some((page, i) => isPageOutOfOrder(page, pages.slice(0, i)));
+});
+
+const answer = badPages.reduce((acc, pages) => {
     const correctOrder = pages.slice().sort(sortIntoPrintOrder);
-    const isOutOfOrder = pages.some((page, i) => page !== correctOrder[i]);
-    if (isOutOfOrder) acc += correctOrder[Math.floor(correctOrder.length / 2)];
+    acc += +correctOrder[Math.floor(correctOrder.length / 2)];
     return acc;
 }, 0);
 
